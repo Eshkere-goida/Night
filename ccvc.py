@@ -1,4 +1,4 @@
-class Bank:
+class Bank:  #4
     def __init__(self, name):
         self.name = name
 
@@ -42,7 +42,7 @@ class User:
     def spend_money(self, amount):
         self.card.pay(amount)
 
-# Пример использования
+
 account = Account("Иван Иванов", 1000)
 card = Card("Иван Иванов", 1000, "1234 5678 9012 3456")
 user = User("Иван Иванов", account, card)
@@ -51,6 +51,35 @@ user.add_money(500)
 user.spend_money(300)
 
 
+
+from abc import ABC,abstractmethod #3
+
+class Product(ABC):
+    def __init__(self,price,name):
+        self.price = price
+        self.name = name
+    @abstractmethod
+    def get_price(self):
+        pass
+
+class Book(Product):
+    def get_price(self):
+        print(f"Цена {self.name}: {self.price}")
+
+class Clothing(Product):
+    def get_price(self):
+        print(f"Цена {self.name}: {self.price}")
+        
+class Electronics(Product):
+    def get_price(self):
+        print(f"Цена {self.name}: {self.price}")
+
+Roman_Pushkina = Book(1488,"Роман")
+Roman_Pushkina.get_price()
+Futbolka_Gucci = Clothing(228, "Футболка")
+Futbolka_Gucci.get_price()
+Chaynik_Philips = Electronics(12184761726471,"Чайник")
+Chaynik_Philips.get_price()
 
     
 
