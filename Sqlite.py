@@ -147,7 +147,7 @@ db.get_all()
 db.close()
 
 
-print("/n -------------------------------------------/n")
+print("\n-------------------------------------------\n")
 
 
 class Sqlite3BookStorage(IBookStorage):
@@ -259,7 +259,7 @@ storage.close()
 
 
 
-print("/n -------------------------------------------/n")
+print("\n-------------------------------------------\n")
 
 
 
@@ -371,3 +371,4 @@ storage.delete(4)
 
 books_after_delete = storage.get_all()
 print(f"Всего книг осталось: {len(books_after_delete)}")
+
