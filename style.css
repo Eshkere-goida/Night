@@ -1,0 +1,208 @@
+/* 1. Цвета и фоны */
+body {
+    background-color: #f5f5f7; /* светло-серый фон */
+    color: #333; /* тёмно-серый текст */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+/* 2. Шрифты */
+h1 {
+    font-family: 'Arial', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+h2 {
+    font-family: 'Arial', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #34495e;
+    margin-top: 30px;
+    margin-bottom: 15px;
+}
+
+p {
+    font-family: 'Arial', sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+}
+
+.about {
+    font-size: 18px;
+    font-weight: 500;
+    background-color: #e8f4f8;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+/* 3. Выравнивание текста и блоков */
+h1 {
+    text-align: center;
+}
+
+p {
+    text-align: justify;
+}
+
+.image-container {
+    text-align: center;
+    margin: 20px 0;
+}
+
+/* 4. Отступы */
+body {
+    padding: 40px 20px;
+}
+
+ul, ol, table {
+    margin-bottom: 25px;
+}
+
+li {
+    margin-bottom: 8px;
+}
+
+/* 5. Рамки */
+table.interests {
+    border: 2px solid #3498db;
+    border-collapse: collapse;
+    width: 100%;
+    margin: 20px 0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+table.interests th,
+table.interests td {
+    border: 1px solid #bdc3c7;
+    padding: 12px;
+    text-align: left;
+}
+
+table.interests th {
+    background-color: #3498db;
+    color: white;
+    font-weight: bold;
+}
+
+table.interests tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+/* 6. Ширина и высота */
+img {
+    width: 100%;
+    max-width: 500px;
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* 7. Позиционирование и эффекты */
+.skills {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.steps {
+    background-color: #f9f9f9;
+    padding: 20px 20px 20px 40px;
+    border-radius: 10px;
+    border-left: 5px solid #2ecc71;
+}
+
+/* 8. Тень текста */
+h1 {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* 9. Прозрачность (при наведении на изображение) */
+img:hover {
+    opacity: 0.9;
+    transition: opacity 0.3s ease;
+}
+
+/* 10. Псевдоклассы */
+a {
+    color: #2980b9;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+a:hover {
+    color: #e74c3c;
+    text-decoration: underline;
+}
+
+a:active {
+    color: #c0392b;
+}
+
+.action-btn {
+    display: block;
+    margin: 30px auto;
+    padding: 15px 30px;
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+    background-color: #27ae60;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
+}
+
+.action-btn:active {
+    background-color: #219653;
+    transform: translateY(0);
+}
+
+.action-btn:focus {
+    outline: 3px solid rgba(46, 204, 113, 0.5);
+    outline-offset: 3px;
+}
+
+/* Скругление углов для списков */
+ul.skills, ol.steps {
+    border-radius: 8px;
+}
+
+/* Стили для элементов списка */
+.skills li {
+    background-color: #ecf0f1;
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    transition: background-color 0.2s;
+}
+
+.skills li:hover {
+    background-color: #d5dbdb;
+}
+
+.steps li {
+    padding: 8px 0;
+    border-bottom: 1px dashed #bdc3c7;
+}
+
+.steps li:last-child {
+    border-bottom: none;
+}
