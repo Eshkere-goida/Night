@@ -1,0 +1,113 @@
+img {
+    height: 1150px;
+    width: 2300px;
+    position: absolute;
+    text-align: center;
+    left: 200px;
+}
+body {
+    background-color: #121212;
+}
+.name {
+    color: white;
+    position: relative;
+    left: 300px;
+    top: 990px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 35px;
+
+}
+.aut {
+    color: #6b6b6b;
+    position: relative;
+    left: 300px;
+    top: 970px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 25px;
+}
+.timeline {
+    position: relative;
+    left: 10px;
+    top: 470px;
+    width: 2500px;
+
+}
+.album {
+    position: relative;
+    height: 180px;
+    width: 180px;
+    top: 1180px;
+    left: 20px;
+    border: transparent solid 1px;
+    border-radius: 20px;
+}
+
+.r{
+    position: relative;
+    left: 1310px;
+    top: 777px;
+    height: 90px;
+    width: 90px;
+    font-weight: 1000;
+    font-size: 30px;
+    border-radius: 50%;
+    border: none;     
+    background-color: #121212; 
+    color: #6b6b6b;      
+    cursor: pointer;   
+    display: flex;     
+    align-items: center;
+    justify-content: center;
+    padding: 0;        
+}
+
+.p{
+    position: relative;
+    left: 1210px;
+    top: 690px;
+    height: 90px;
+    width: 90px;
+    font-weight: 1000;
+    font-size: 30px;
+    border-radius: 50%;
+    border: none;     
+    background-color: #ebc800; 
+    color: #ffffff;      
+    cursor: pointer;   
+    display: flex;     
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.f{
+    position: relative;
+    left: 1110px;
+    top: 865px;
+    height: 90px;
+    width: 90px;
+    font-weight: 1000;
+    font-size: 30px;
+    border-radius: 50%;
+    border: none;     
+    background-color: #121212; 
+    color: #6b6b6b;      
+    cursor: pointer;   
+    display: flex;     
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.age {
+    border: #6b6b6b solid 4px;
+    position: relative;
+    background-color: #121212;
+    color: #6b6b6b;
+    height: 40px;
+    width: 80px;
+    border-radius: 10px;
+    font-size: 20px;
+    left: 580px;
+    top: 580px;
+}
