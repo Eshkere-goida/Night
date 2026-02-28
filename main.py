@@ -1,240 +1,48 @@
-import telebot
-import math
-from telebot import types
-TOKEN = "7981273332:AAFF4OIroh31aiXyct4lhzbxREUrgEmX2Gw"
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-bot = telebot.TeleBot(TOKEN)
+class Item(BaseModel):
+    name: str
+    price:str
+    status: str
 
-@bot.message_handler(commands=['calculator'])
-def show_menu(message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+app = FastAPI()
 
-    btn1 = types.KeyboardButton("+")
-    btn2 = types.KeyboardButton("-")
-    btn3 = types.KeyboardButton("*")
-    btn4 = types.KeyboardButton("/")
-    btn5 = types.KeyboardButton("//")
-    btn6 = types.KeyboardButton("%")
-    btn7 = types.KeyboardButton("√")
-    btn8 = types.KeyboardButton("^")
-    markup.add(btn1,btn2,btn3,btn4,btn5,btn6,btn7,btn8)
+app.add_middleware (
+    CORSMiddleware,
+    allow_origins = ["*"],
+    allow_methods = ["*"],
+    allow_headers = ["*"],
+)
 
+inventory = [
+    {"id":1,"name":"Скафандр Марс-1","price":450,"status":"В наличии"},
+    {"id":2,"name":"Кислородный баллон","price":80,"status":"Мало"},
+    {"id":3,"name":"Набор инструментов","price":120,"status":"В наличии"}
+]
 
-    bot.send_message(message.chat.id , "Выбери действие:", reply_markup=markup)
-
-
-@bot.message_handler(func=lambda message:message.text.lower() == "+")
-
-def get_operation(message):
-    bot.send_message(message.chat.id, "Введите первое число:")
-    bot.register_next_step_handler(message,get_first_number)
-
-def get_first_number(message):
-    try:
-        num1 = float(message.text)
-    except ValueError:
-        bot.send_message(message.chat.id, "Это не число! Попробуйте снова.")
-        return
-    bot.send_message(message.chat.id, "Введите второе число:")
-    bot.register_next_step_handler(message, get_second_number,num1)
-
-def get_second_number(message,num1):
-    try:
-        num2 = float(message.text)
-    except ValueError:
-        bot.send_message(message.chat.id, "Это не число! Попробуйте снова.")
-        return
-    result = None
-    
-    result = num1 + num2
-        
-    bot.send_message(message.chat.id, f"Результат: {result}")
-
-@bot.message_handler(func=lambda message:message.text.lower() == "-")
-
-def get_operation1(message):
-    bot.send_message(message.chat.id, "Введите первое число:")
-    bot.register_next_step_handler(message,get_first_number1)
-
-def get_first_number1(message):
-    try:
-        num1 = float(message.text)
-    except ValueError:
-        bot.send_message(message.chat.id, "Это не число! Попробуйте снова.")
-        return
-    bot.send_message(message.chat.id, "Введите второе число:")
-    bot.register_next_step_handler(message, get_second_number1,num1)
-
-def get_second_number1(message,num1):
-    try:
-        num2 = float(message.text)
-    except ValueError:
-        bot.send_message(message.chat.id, "Это не число! Попробуйте снова.")
-        return
-    result = None
-    
-    result = num1 - num2
-        
-    bot.send_message(message.chat.id, f"Результат: {result}")
+@app.get("/items")
+def get_all_items(max_price: int=None):
+    if max_price is None:
+        return inventory
+    filtered_items = []
+    for item in inventory:
+        if item["price"] <= max_price:
+            filtered_items.append(item)
+    return filtered_items
 
 
-@bot.message_handler(func=lambda message:message.text.lower() == "*")
+@app.post("/items")
+def add_item (item:Item):
+    new_item_dict = item.dict()
+    new_item_dict["id"] = len(inventory)+1
 
-def get_operation2(message):
-    bot.send_message(message.chat.id, "Введите первое число:")
-    bot.register_next_step_handler(message,get_first_number2)
+    inventory.append(new_item_dict)
+    return {"message":"Товар успешно добавлен","item":new_item_dict}
 
-def get_first_number2(message):
-    try:
-        num1 = float(message.text)
-    except ValueError:
-        bot.send_message(message.chat.id, "Это не число! Попробуйте снова.")
-        return
-    bot.send_message(message.chat.id, "Введите второе число:")
-    bot.register_next_step_handler(message, get_second_number2,num1)
-
-def get_second_number2(message,num1):
-    try:
-        num2 = float(message.text)
-    except ValueError:
-        bot.send_message(message.chat.id, "Это не число! Попробуйте снова.")
-        return
-    result = None
-    
-    result = num1 * num2
-        
-    bot.send_message(message.chat.id, f"Результат: {result}")
-
-@bot.message_handler(func=lambda message:message.text.lower() == "/")
-
-def get_operation3(message):
-    bot.send_message(message.chat.id, "Введите первое число:")
-    bot.register_next_step_handler(message,get_first_number3)
-
-def get_first_number3(message):
-    try:
-        num1 = float(message.text)
-    except ValueError:
-        bot.send_message(message.chat.id, "Это не число! Попробуйте снова.")
-        return
-    bot.send_message(message.chat.id, "Введите второе число:")
-    bot.register_next_step_handler(message, get_second_number3,num1)
-
-def get_second_number3(message,num1):
-    try:
-        num2 = float(message.text)
-    except ValueError:
-        bot.send_message(message.chat.id, "Это не число! Попробуйте снова.")
-        return
-    result = None
-    
-    result = num1 / num2
-        
-    bot.send_message(message.chat.id, f"Результат: {result}")
-
-
-@bot.message_handler(func=lambda message:message.text.lower() == "//")
-
-def get_operation4(message):
-    bot.send_message(message.chat.id, "Введите первое число:")
-    bot.register_next_step_handler(message,get_first_number4)
-
-def get_first_number4(message):
-    try:
-        num1 = float(message.text)
-    except ValueError:
-        bot.send_message(message.chat.id, "Это не число! Попробуйте снова.")
-        return
-    bot.send_message(message.chat.id, "Введите второе число:")
-    bot.register_next_step_handler(message, get_second_number4,num1)
-
-def get_second_number4(message,num1):
-    try:
-        num2 = float(message.text)
-    except ValueError:
-        bot.send_message(message.chat.id, "Это не число! Попробуйте снова.")
-        return
-    result = None
-    
-    result = num1 // num2
-        
-    bot.send_message(message.chat.id, f"Результат: {result}")
-
-@bot.message_handler(func=lambda message:message.text.lower() == "%")
-
-def get_operation5(message):
-    bot.send_message(message.chat.id, "Введите первое число:")
-    bot.register_next_step_handler(message,get_first_number5)
-
-def get_first_number5(message):
-    try:
-        num1 = float(message.text)
-    except ValueError:
-        bot.send_message(message.chat.id, "Это не число! Попробуйте снова.")
-        return
-    bot.send_message(message.chat.id, "Введите второе число:")
-    bot.register_next_step_handler(message, get_second_number5,num1)
-
-def get_second_number5(message,num1):
-    try:
-        num2 = float(message.text)
-    except ValueError:
-        bot.send_message(message.chat.id, "Это не число! Попробуйте снова.")
-        return
-    result = None
-    
-    result = num1 % num2
-        
-    bot.send_message(message.chat.id, f"Результат: {result}")
-
-
-@bot.message_handler(func=lambda message:message.text.lower() == "^")
-
-def get_operation6(message):
-    bot.send_message(message.chat.id, "Введите первое число:")
-    bot.register_next_step_handler(message,get_first_number6)
-
-def get_first_number6(message):
-    try:
-        num1 = float(message.text)
-    except ValueError:
-        bot.send_message(message.chat.id, "Это не число! Попробуйте снова.")
-        return
-    bot.send_message(message.chat.id, "Введите второе число:")
-    bot.register_next_step_handler(message, get_second_number6,num1)
-
-def get_second_number6(message,num1):
-    try:
-        num2 = float(message.text)
-    except ValueError:
-        bot.send_message(message.chat.id, "Это не число! Попробуйте снова.")
-        return
-    result = None
-    
-    result = num1 ** num2
-        
-    bot.send_message(message.chat.id, f"Результат: {result}")
-
-@bot.message_handler(func=lambda message:message.text.lower() == "√")
-
-def get_operation7(message):
-    bot.send_message(message.chat.id, "Выбранная операция работает только с первым числом.")
-    bot.send_message(message.chat.id, "Введите первое число:")
-    bot.register_next_step_handler(message,get_first_number7)
-
-def get_first_number7(message):
-    try:
-        num1 = float(message.text)
-    except ValueError:
-        bot.send_message(message.chat.id, "Это не число! Попробуйте снова.")
-        return
-    result = None
-    
-    result = math.sqrt(num1)
-        
-    bot.send_message(message.chat.id, f"Результат: {result}")
-    
-    
-bot.polling(non_stop=True)
-
-
+@app.delete("/items/{item_id}")
+def delete_item(item_id: int):
+    global inventory
+    inventory = [item for item in inventory if item["id"] != item_id]
+    return {"status":"success","message" : f"Товар {item_id} удален"}

@@ -1,81 +1,26 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Моё Резюме</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Document</title>
+    
 </head>
 <body>
-    
-    <h1>Даниил Назаров</h1>
-    
-    
-    <p class="about">Привет! Я начинающий веб-разработчик, увлекаюсь созданием сайтов и изучением современных технологий. Стремлюсь к постоянному развитию и освоению новых навыков в IT-сфере.</p>
-    
-    
-    <h2>Мои навыки</h2>
-    <ul class="skills">
-        <li>HTML5</li>
-        <li>CSS3</li>
-        <li>Python разработка</li>
-        <li>Работа с Git</li>
-        <li>Основы C++</li>
-    </ul>
-    
-    
-    <p>Посетите мой любимый ресурс для обучения: 
-        <a href="https://developer.mozilla.org/ru/" target="_blank">MDN Web Docs</a>
-    </p>
-    
-    
-    <div class="image-container">
-        <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60" alt="Программирование на компьютере">
-    </div>
-    
- 
-    <h2>Мои интересы</h2>
-    <table class="interests">
-        <tr>
-            <th>Направление</th>
-            <th>Уровень интереса</th>
-            <th>Время изучения</th>
-        </tr>
-        <tr>
-            <td>Веб-разработка</td>
-            <td>Высокий</td>
-            <td>2 месяца</td>
-        </tr>
-        <tr>
-            <td>Дизайн интерфейсов</td>
-            <td>Средний</td>
-            <td>3 месяца</td>
-        </tr>
-        <tr>
-            <td>Python разработка</td>
-            <td>Выше среднего</td>
-            <td>9 месяцев</td>
-        </tr>
-    </table>
-    
-
-    <h2>Мой план развития</h2>
-    <ol class="steps">
-        <li>Освоить основы HTML и CSS</li>
-        <li>Изучить JavaScript</li>
-        <li>Научиться работать с фреймворками</li>
-        <li>Создать портфолио проектов</li>
-        <li>Пройти стажировку в IT-компании</li>
-    </ol>
-    
-    
-    <button class="action-btn">Связаться со мной</button>
-    
-
-    <!-- 
-        Это мое первое резюме на HTML/CSS.
-        Создано 25 января 2025 года.
-        Проверено через валидатор W3C.
-    -->
+    <div class="add-box">
+        <h3>Добавить новое оборудование</h3>
+        <input type="text" id="new-name" placeholder="Название...">
+        <input type="number" id="new-price" placeholder="Цена...">
+        <button id="add-btn">Внести в базу</button>
+    </div> 
+    <div class="shop-panel">
+        <h1>Космический Склад v1.0</h1>
+        <div class="controls">
+            <button id="load-data">Обновить список товаров</button>
+            <p id="status-label">Статус связи: <span>Ожидание</span></p>
+        </div>
+    </div> 
+    <div id="inventory-grid" class="grid-container"></div>
+    <script src="script.js"></script>
 </body>
-</html>    
+</html>
