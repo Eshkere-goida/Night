@@ -86,7 +86,37 @@ def apply_sale(percent: int = 10):
     }
     
 
-@app.get("/rmed", tags=["Просмотр"])
+@app.get("/items/random", tags=["Просмотр"])
 def get_random_medicine():
     random_id = random.randint(0,len(medicines)-1)
     return medicines[random_id]
+
+@app.get("/items/cheap", tags=["Просмотр"])
+def get_cheap_medicine():
+    cheap_list = []
+    for dict in medicines:
+        if dict["price"] < 500:
+            cheap_list.append(dict)
+    return cheap_list
+
+@app.get("/items/count", tags=["Просмотр"])
+def get_med_quantity():
+    quantity = len(medicines)
+    return f"На складе {quantity} товаров."
+
+@app.get("/items/search", tags=["Просмотр"])
+def find_by_name(name:str):
+    for dict in medicines:
+        if dict["name"] == name:
+            return dict
+    raise HTTPException(
+        status_code=404,
+        detail=f"Препарата с названием {name} нету на складе."
+    )
+
+@app.get("/items/clear-all" , tags=["Администрирование"])
+def clear_all():
+    medicines.clear()
+
+
+
