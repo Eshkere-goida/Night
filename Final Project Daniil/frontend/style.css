@@ -1,0 +1,130 @@
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.02); 
+        opacity: 0.75; 
+        background-color: #8e9777;;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+
+.epileptic:hover {
+    animation: eshkere infinite;
+
+}
+body {
+    font-family: monospace;
+    font-size: 17px;
+    background-color: beige;
+    margin: 0;
+}
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    
+    
+}
+header {
+    background-color: rgb(219, 236, 187);
+    color:rgb(49, 51, 62);
+    padding: 15px 0;
+}
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+}
+header nav a {
+    color:rgb(49, 51, 62);
+    text-decoration: none;
+    margin-left: 20px;
+    transition: 0.3s;
+}
+header nav a:hover {
+    color: rgb(134, 134, 134);
+    
+}
+.items-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: flex-start;
+    margin-top: 30px;
+    
+}
+.card {
+    background: linear-gradient(#d6e1b2,#acdcac);
+    border-radius: 12px;
+    padding: 20px;
+    width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: transform 0.2s,box-shadow 0.2s;
+}
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+    
+}
+.card:hover .btn-more {
+    animation: pulse 2s infinite;
+    
+}
+
+
+.card-title {
+    margin: 5px 0;
+    font-size: 1.2rem;
+    color: #2d3436;
+
+}
+.card-description {
+    font-size: 0.9rem;
+    color: #636e72;
+    line-height: 1.4;
+    flex-grow: 1;
+}
+.card-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    padding: 10px 0;
+    border-top: 1px solid #eee;
+}
+.card-badge {
+    align-self: flex-start;
+    background: #00fc00;
+    color: #019b01;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+.btn-more {
+    background: #7c8467;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s;
+}
+.btn-more:hover {
+    background: #646b54;
+
+}
