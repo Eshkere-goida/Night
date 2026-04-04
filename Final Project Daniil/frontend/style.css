@@ -15,16 +15,39 @@
 }
 
 
-.epileptic:hover {
-    animation: eshkere infinite;
+:root {
+    --bg-color:beige;
+    --text-color:color:rgb(49, 51, 62);;
+    --card-bg: linear-gradient(#d6e1b2,#acdcac);
+    font-family: monospace;
+    font-size: 17px;
+    margin: 0;
+}
+
+body.dark-theme {
+    --bg-color: #341717;
+    --text-color: #ecf0f1;
+    --card-bg: linear-gradient(#e1b2b2,#a73a3a);
 
 }
+body.dark-theme .card {
+    background: linear-gradient(#290303,#a73a3a);
+    color: #ecf0f1;
+}
+
+body {
+    background-color: var(--bg-color);
+    color:var(--text-color);
+    transition: 0.3s;
+}
+
+/* 
 body {
     font-family: monospace;
     font-size: 17px;
     background-color: beige;
     margin: 0;
-}
+} */
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -127,4 +150,24 @@ header nav a:hover {
 .btn-more:hover {
     background: #646b54;
 
+}
+
+
+.card.danger-mode {
+    border: 2px solid #ff4d4d;
+    box-shadow: 0 0 15px rgba(255,77,77,0.3);
+    background-color: rgba(255,77,77, 0.05);
+}
+
+.clock {
+    display: flex;
+    justify-self: right;
+    margin-right: 20px;
+
+}
+
+.btn-theme {
+    display: flex;
+    justify-self: right;
+    background: beige;
 }

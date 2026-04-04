@@ -8,6 +8,10 @@
 </head>
 <body>
     <header>
+        <div id="clock-container" class="clock">
+            <span id="live-clock">00:00:00</span>
+        </div>
+        <button id="theme-toggle" class="btn-theme">🌙 Тёмная тема</button>
         <div class="header-content container">
             <div class="logo">Warehouse 2026</div>
             <nav>
@@ -17,20 +21,14 @@
         </div>
     </header>
     <main class="container">
-        
-        <div class="items-grid">
-            <div class="card">
-                <div class="card-badge">Сектор А-1</div>
-
-                <h3 class="card-title">Название объекта</h3>
-                <p class="card-description">Описание 'placeholder'</p>
-                <div class="card-stats">
-                    <span>📦 Кол-во : <b>10</b></span>
-                    <span class="card-extra">💰 500$</span>
-                </div>
-                <button class="btn-more">Подробнее</button>
-            </div>
+        <selection class="intro">
+            <h1>Управление инвентарем</h1>
+            <p>Добро пожаловать в систему мониторинга склада. Используйте навигацию для управления данными.</p>
+        </selection>
+        <div id="items-container" class="items-grid">
+           
         </div>
         </main>
+        <script src="script.js"></script>
 </body>
 </html>
