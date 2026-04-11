@@ -8,12 +8,25 @@
 </head>
 <body>
     <header>
-        <div id="clock-container" class="clock">
-            <span id="live-clock">00:00:00</span>
+        <div id="stats-left">
+            <div id="clock-container" class="clock">
+                <span id="live-clock">00:00:00</span>
+            </div>
+
+            <button id="refresh-btn" class="btn-more" style="width : auto; justify-self: right;">🔄 Обновить данные</button>
+            
+            <button id="danger-filter" style="background: #e74c3c; justify-self: center;">⚠️</button>
+            
+            <button id="theme-toggle" class="btn-theme">🌙 Тёмная тема</button>
         </div>
-        <button id="theme-toggle" class="btn-theme">🌙 Тёмная тема</button>
+        
         <div class="header-content container">
             <div class="logo">Warehouse 2026</div>
+            <div class="header-tools">
+                <span class="stats">Предметов: <b id="total-count">0</b></span>
+                <input type="text" id="search-input" placeholder="Найти...">
+                <button id="search-btn">🔎</button>
+            </div>
             <nav>
                 <a href="index.html">Каталог</a>
                 <a href="add.html">Добавить объект</a>
@@ -25,6 +38,7 @@
             <h1>Управление инвентарем</h1>
             <p>Добро пожаловать в систему мониторинга склада. Используйте навигацию для управления данными.</p>
         </selection>
+        <div id="loader" style="text-align: center; display: none;">⏳ Загрузка склада...</div>
         <div id="items-container" class="items-grid">
            
         </div>

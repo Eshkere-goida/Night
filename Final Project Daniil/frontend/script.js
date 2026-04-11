@@ -1,43 +1,4 @@
 
-items = [
-    {
-        "id" : 1,
-        "name" : "Электро-Самокат",
-        "storage_sector": 12,
-        "weight" : 40,
-        "quantity": 3,
-        "price" : 300,
-        "is_dangerous" : false
-    },
-    {
-        "id" : 2,
-        "name" : "Набор носков",
-        "storage_sector":5,
-        "weight" : 5,
-        "quantity": 3,
-        "price" : 40,
-        "is_dangerous" : false
-    },
-    {
-        "id" : 3,
-        "name" : "Урановый стержень",
-        "storage_sector":8,
-        "weight" : 80,
-        "quantity": 1,
-        "price" : 800,
-        "is_dangerous" : true
-    },
-    {
-        "id" : 4,
-        "name" : "Фосфорная кислота",
-        "storage_sector":10,
-        "weight" : 1,
-        "quantity": 6,
-        "price" : 450,
-        "is_dangerous" : true
-    }
-]
-
 
 
 const savedTheme = localStorage.theme;
@@ -67,6 +28,33 @@ themeBtn.addEventListener("click",() => {
 
 const container = document.getElementById('items-container');
 
+
+function loadItemsFromServer() {
+    const API_URL = "http://127.0.0.1:8000/items";
+    const loader = document.getElementById('loader');
+
+    loader.style.display = "block";
+
+    fetch (API_URL)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Ошибка: Сервер не отвечает или адрес не найден");
+    
+            }
+            return response.json();
+        })
+        .then(data => {
+            loader.style.display = "none";
+            renderCards(data);
+        })
+        .catch(error => {
+            loader.style.display = "none";
+            console.error("Проблема с API:",error);
+            const container = document.getElementById('items-container')
+            container.innerHTML = "<h3>Ошибка подключения к базе данных склада</h3>";
+
+        });
+}
 function updateTime() {
     const clockElement = document.getElementById('live-clock');
     const now = new Date();
@@ -76,10 +64,13 @@ function updateTime() {
 }
 
 
-function renderCards() {
+function renderCards(data) {
     container.innerHTML = "";
-
-    items.forEach(item => {
+    if (data.length === 0) {
+        container.innerHTML = "<p>На складе пока нет зарегистрированных объектов.</p>";
+        return;
+    }
+    data.forEach(item => {
         const card = document.createElement('div');
         card.className = 'card';
         if (item.is_dangerous === true) {
@@ -104,6 +95,54 @@ function renderCards() {
     });
 }
 
-renderCards()
+function loadStats() {
+    fetch("http://127.0.0.1/items/count")
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('total-count').innerText = data.total;
+        })
+        .catch(err => console.error("Ошибка при получении статистики:",err));
+}
+
+const searchInput = document.getElementById('search-input');
+const searchBtn = document.getElementById('search-btn');
+
+searchInput.addEventListener('input', () => {
+    const query = searchInput.value;
+    const url = query
+        ? `http://127.0.0.1:8000/items/search?name=${query}`
+        : "http://127.0.0.1:8000/items";
+    
+    fetch(url)
+        .then(res => res.json())
+        .then(data => renderCards(data))
+    
+});
+
+searchBtn.addEventListener('click', () => {
+    const query = searchInput.value;
+    fetch(`http://127.0.0.1:8000/items/search?name=${query}`)
+        .then(res => res.json())
+        .then(filteredData => {
+            renderCards(filteredData)
+        })
+})
+const refreshBtn = document.getElementById('refresh-btn');
+
+const dangerBtn = document.getElementById('danger-filter') 
+dangerBtn.addEventListener("click", () => {
+    fetch("http://127.0.0.1:8000/items")
+        .then(res => res.json())
+        .then(data => {
+            const filtered = data.filter(item => item.is_dangerous === true);
+            renderCards(filtered);
+        });
+});
+refreshBtn.addEventListener('click', () => {
+    loadItemsFromServer();
+});
+
+loadItemsFromServer();
+loadStats();
 
 setInterval(updateTime,1000)

@@ -17,7 +17,7 @@
 
 :root {
     --bg-color:beige;
-    --text-color:color:rgb(49, 51, 62);;
+    --text-color:color:rgb(49, 51, 62);
     --card-bg: linear-gradient(#d6e1b2,#acdcac);
     font-family: monospace;
     font-size: 17px;
@@ -41,13 +41,27 @@ body {
     transition: 0.3s;
 }
 
-/* 
-body {
-    font-family: monospace;
-    font-size: 17px;
-    background-color: beige;
-    margin: 0;
-} */
+
+
+header {
+    --background-color: rgb(219, 236, 187);
+    --color1:rgb(49, 51, 62);
+    padding: 15px 0;
+}
+
+header.dark-theme {
+    --background-color: #330404;
+    --color1:rgb(172, 168, 193);
+    padding: 15px 0;
+}
+
+header {
+    background-color: var(--background-color);
+    color:var(--color1);
+    transition: 0.3s;
+}
+
+
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -55,16 +69,49 @@ body {
     
     
 }
-header {
-    background-color: rgb(219, 236, 187);
-    color:rgb(49, 51, 62);
-    padding: 15px 0;
-}
+
+
 .header-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
+.header-tools {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: rgba(255,255,255,0.2);
+    padding: 5px 15px;
+    border-radius: 20px;
+
+}
+.header-tools input {
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    outline: none;
+    width: 150px;
+}
+
+.header-tools button {
+    background: #555;
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.header-tools button:hover {
+    background: #555;
+}
+.stats {
+    font-size: 14px;
+    color: #fff;
+    white-space: nowrap;
+}
+
 .logo {
     font-size: 24px;
     font-weight: bold;
@@ -168,6 +215,12 @@ header nav a:hover {
 
 .btn-theme {
     display: flex;
-    justify-self: right;
+    justify-self: left;
     background: beige;
+}
+
+.refresh-btn {
+    display: flex;
+    justify-self: right;
+    margin-right: 20px;
 }

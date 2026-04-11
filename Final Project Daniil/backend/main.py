@@ -175,4 +175,3 @@ def add_stock(item_id:int,amount:int):
         )
         
     
-
