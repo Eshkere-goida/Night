@@ -64,27 +64,24 @@ function updateTime() {
 }
 
 
-function renderCards(data) {
+function renderCards(items) {
     container.innerHTML = "";
     if (data.length === 0) {
         container.innerHTML = "<p>На складе пока нет зарегистрированных объектов.</p>";
         return;
     }
-    data.forEach(item => {
+    items.forEach(item => {
         const card = document.createElement('div');
         card.className = 'card';
-        if (item.is_dangerous === true) {
-            card.classList.add('danger-mode');
-        }
         card.innerHTML = `
-        <div class="card-badge">Сектор ${item.storage_sector}</div>
-        <h3 class="card-title">${item.name}</h3>
-        <p class="card-description">Вес объекта: ${item.weight} кг.</p>
-        <div class="card-stats">
-            <span>📦 Кол-во : <b>${item.quantity}</b></span>
-            <span class="card-extra">${item.is_dangerous ? '⚠️ Опасно': '✅ Безопасно'}</span>
+        <div class="card-image-wrapper">
+            <img src="http://127.0.0.0.1:8000${item.image_url}" alt = "${item.name}" class="item-img">
         </div>
-        <button class="btn-more">Подробнее</button> 
+        <div class="card-info">
+            <span class="sector-tag">Сектор ${item.storage_sector}</span>
+            <h3 class="item-name">${item.name}</h3>
+            <p class="item-quantity">Количество: <strong>${item.quantity} шт.</strong></p>
+        </div>
     `;
     if (item.is_dangerous) {
         const title = card.querySelector('.card-title');

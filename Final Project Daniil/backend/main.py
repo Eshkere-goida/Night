@@ -3,6 +3,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from database import items
 import random
+from fastapi.staticfiles import StaticFiles
+from fastapi import UploadFile, File, Form
+import shutil
+import os
 
 class Item(BaseModel):
     id: int = Field(...,gt=0)
@@ -12,6 +16,7 @@ class Item(BaseModel):
     quantity: int = Field(default=1,gt=0)
     price: int = Field(...,gt=0)
     is_dangerous: bool = Field(default=False)
+    image_url: str
     
 app = FastAPI(
     title="Digital Inventory System",
@@ -25,6 +30,14 @@ app.add_middleware (
     allow_methods = ["*"],
     allow_headers = ["*"]
 )
+
+static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
+
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+app.mount("/static", StaticFiles(directory="static"),name="static")
+
+
 
 @app.get("/items", tags = ["Просмотр"])
 def get_all_items():
@@ -47,31 +60,31 @@ def get_one_item(item_id : int):
 
 
 @app.post("/items",tags = ["Администрирование"], status_code=201)
-def create_item(item: Item):
-    if item.weight > 2000:
-        raise HTTPException(
-            status_code=404,
-            detail="Склад не рассчитан на такой вес. Максимум: 2000 кг."
-        )
-    for existing_med in items:
-        if existing_med["name"].lower() == item.name.lower():
-            raise HTTPException(
-                status_code = 400,
-                detail = f"Ошибка: Объект с названием '{item.name}' уже существует!"
-            )
-            
-    new_medicine_dict = item.model_dump()
-    
-    if len(items) > 0:
+async def create_item(
+    name: str = Form(...),
+    storage_sector: int = Form(...),
+    quantity: int = Form(...),
+    image_file: UploadFile = File(...)
+):
+    file_path = f"static/img/{image_file.filename}"
+    with open(file_path,"wb") as buffer:
+        shutil.copyfileobj(image_file.file, buffer)
+    if len(items) >0:
         new_id = items[-1]["id"] + 1
     else:
         new_id = 1
         
-    new_medicine_dict["id"] = new_id
-    
-    items.append(new_medicine_dict)
-    
-    return {"status" : "success", "new_id" : new_id , "added_medicine" : new_medicine_dict}
+    new_item = {
+        "id":new_id,
+        "name": name,
+        "storage_sector": storage_sector,
+        "weight": 0.0,
+        "quantity": quantity,
+        "is_dangerous":False,
+        "image_url": f"/{file_path}"
+    }
+    items.append(new_item)
+    return new_item
 
 
 @app.post("/medicines/apply-sale", tags=["Специальные предложения"])
