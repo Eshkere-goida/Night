@@ -19,26 +19,31 @@
     <main class="container">
         <div class="form-container">
             <h2>📦 Регистрация нового груза</h2>
-            <form id="add-item-form">
-                <input type="text" id="name" placeholder="Название предмета" required>
-                <div class="input-group">
-                    <input type="file" id="image_file" accept="image_file" required>
-                </div>
+            <form id="add-item-form" enctype="multipart/form-data">
+                <input type="text" id="name" name="name" placeholder="Название предмета" required>
+                
+                <input type="file" id="image_file" name="image_file" accept="image/*" required>
+                
                 <div class="form-row">
-                    <input type="number" id="sector" placeholder="Сектор" required>
-                    <input type="number" id="quantity" placeholder="Количество" required>
+                    <input type="number" id="sector" name="sector" placeholder="Сектор (1-99)" required>
+                    <input type="number" id="quantity" name="quantity" placeholder="Количество" required>
                 </div>
-                <input type="number" step="0.1" id="weight" placeholder="Вес(кг)">
+                
+                <div class="form-row">
+                    <input type="number" step="0.1" id="weight" name="weight" placeholder="Вес (кг)">
+                    <input type="number" id="price" name="price" placeholder="Цена (₽)" required>
+                </div>
+                
                 <label class="checkbox-label">
-                    <input type="checkbox" id="is_dangerous"> Опасный груз
+                    <input type="checkbox" id="is_dangerous" name="is_dangerous"> Опасный груз
                 </label>
+                
                 <button type="submit" id="save-btn">Сохранить на склад</button>
-
             </form>
-            <div class="preview-section">
+            
+            <div class="preview-section" id="preview-container" style="display: none;">
                 <p>Предпросмотр фото:</p>
-                <img id="preview-img" src="https://via.placeholder.com/150" alt="Превью">
-        
+                <img id="preview-img" src="#" alt="Превью">
             </div>
         </div>
     </main>

@@ -66,7 +66,7 @@ function updateTime() {
 
 function renderCards(items) {
     container.innerHTML = "";
-    if (data.length === 0) {
+    if (items.length === 0) {
         container.innerHTML = "<p>На складе пока нет зарегистрированных объектов.</p>";
         return;
     }
