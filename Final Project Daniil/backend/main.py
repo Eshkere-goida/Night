@@ -1,3 +1,4 @@
+from storage import user_carts
 from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -97,6 +98,30 @@ async def create_item(
     except Exception as e:
         print(f"Ошибка при создании предмета: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/cart/add/{item_id}",tags=["Корзина"])
+
+def add_to_cart(item_id:int,user_id:str):
+    
+    if user_id not in user_carts:
+    
+        user_carts[user_id] = {}
+    
+    current_cart = user_carts[user_id]
+    
+    current_cart[item_id] = current_cart.get(item_id)
+    
+    return {
+        "status":"success",
+        "cart":current_cart
+    }
+    
+
+@app.get("/cart",tags=["Корзина"])
+def get_my_cart(user_id:str):
+    return user_carts.get(user_id,{})
+
 
 
 @app.get("/items/random", tags=["Просмотр"])

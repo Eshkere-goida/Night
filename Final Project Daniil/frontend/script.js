@@ -1,5 +1,33 @@
+let userId = localStorage.getItem('warehouse_user_id');
 
+if(!userId ) {
+    userId = 'user_' + Math.random().toString(36).slice(2,11);
+    localStorage.setItem('warehouse_user_id',userId);
 
+    console.log("Создан новый ID пользователя:",userId);
+} else {
+    console.log("Пользователь узнан. Ваш ID:",userId);
+}
+
+async function addToCart(itemId) {
+    const API_URL = `http://127.0.0.1:8000/cart/add/${itemId}?user_id=${userId}`;
+    try {
+        const response = await fetch(API_URL,{
+            method: 'POST'
+        });
+        if (response.ok) {
+            const data = await response.json();
+            alert("Товар добавлен в корзину!");
+            console.log("Состояние вашей корзиный на сервере:",data.cart);
+        } else {
+            alert("Ошибка: не удалось добавить товар.");
+        }
+    } catch (error) {
+        console.error("Ошибка сети:",error);
+        alert("Нет связи с сервером");
+    }
+    
+}
 
 const savedTheme = localStorage.theme;
 
@@ -64,6 +92,7 @@ function updateTime() {
 }
 
 
+
 function renderCards(items) {
     container.innerHTML = "";
     if (items.length === 0) {
@@ -74,13 +103,17 @@ function renderCards(items) {
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-        <div class="card-image-wrapper">
-            <img src="http://127.0.0.0.1:8000${item.image_url}" alt = "${item.name}" class="item-img">
+        <div class="card-badge"> Сектор ${item.storage_sector}</div>
+        <h3 class="card-title"> ${item.name} </h3>
+        <p class="card-description"> Вес: ${item.weight} кг</p>
+
+        <div class="card-stats">
+            <span>Кол-во: <b>${item.quantity}</b> </span>
         </div>
-        <div class="card-info">
-            <span class="sector-tag">Сектор ${item.storage_sector}</span>
-            <h3 class="item-name">${item.name}</h3>
-            <p class="item-quantity">Количество: <strong>${item.quantity} шт.</strong></p>
+        <div class="card-footer" style="display: flex;gap: 5px; margin-top: 10px;">
+            <button class="btn-more" onclick="window.location.href='item.html?id=${item.id}'">📄</button>
+
+            <button class="btn-cart" onclick="addToCart(${item.id})" style="flex-grow:1;background-color: #28a745; color: white;border:none;border-radius:5px;cursor:pointer;"> 🛒 В корзину </button>
         </div>
     `;
     if (item.is_dangerous) {

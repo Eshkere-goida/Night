@@ -33,7 +33,7 @@ if (form) {
         formData.append("is_dangerous", document.getElementById('is_dangerous').checked);
         formData.append("image_file", fileInput.files[0]);
 
-        // Проверяем, что все поля заполнены
+        
         if (!formData.get('price')) {
             alert("❌ Введите цену товара!");
             return;

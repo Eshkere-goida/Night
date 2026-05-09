@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Моя корзина</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="header-content container">
+            <div class="logo">Моя корзина</div>
+            <nav>
+                <a href="index.html">Каталог</a>
+                <a href="add.html">Добавить предмет</a>
+                <a href="cart.html" class="cart-link">🛒 Корзина</a>
+            </nav>
+        </div>
+    </header>
+    <main class="container">
+        <h2>Список товаров к получению</h2>
+        <div id="cart-container" class="items-grid">
+            </div>
+        <div id="empty-msg" style="display: none;">Ваша корзина пока пуста.</div>
+    </main>
+    <script src="cart-script.js"></script>
+</body>
+</html>
