@@ -1,189 +1,154 @@
-from storage import user_carts
-from pydantic import BaseModel, Field
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from database import items
-import random
+import sqlite3
 import shutil
-import os
-from datetime import datetime
+from fastapi import FastAPI, HTTPException, UploadFile,File,Form,Query
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-class Item(BaseModel):
-    id: int = Field(..., gt=0)
-    name: str = Field(..., min_length=1, max_length=50)
-    storage_sector: int = Field(..., ge=1, le=99)
-    weight: float = Field(..., gt=0)
-    quantity: int = Field(default=1, gt=0)
-    price: int = Field(..., gt=0)
-    is_dangerous: bool = Field(default=False)
-    image_url: str = Field(default="")
 
 app = FastAPI(
     title="Digital Inventory System",
     description="Система управления складом будущего.",
-    version="1.0.0"
+    version="1.1.6"
 )
-
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:5500", "http://localhost:5500", "*"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
 
-os.makedirs("static", exist_ok=True)
-os.makedirs("static/img", exist_ok=True)
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+class ItemUpdate(BaseModel):
+    name: str
+    storage_sector: int
+    weight: float 
+    quantity: int
+    is_dangerous: bool
+    image: str | None = None
+    
+def get_db_connection():
+    conn = sqlite3.connect('warehouse.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def format_db_row(rows):
+    return [dict(row) for row in rows]
+
+
 
 @app.get("/items", tags=["Просмотр"])
 def get_all_items():
-    return items
+    with get_db_connection() as conn:
+        items = conn.execute("SELECT * FROM items").fetchall()
+        return format_db_row(items)
+    
 
 @app.get("/items/{item_id}", tags=["Просмотр"])
 def get_one_item(item_id: int):
-    for item in items:
-        if item["id"] == item_id:
-            if "image_url" not in item or not item["image_url"]:
-                item["image_url"] = "/static/img/default.jpg"
-            return item
-    raise HTTPException(status_code=404, detail="Item not found")
-
+    with get_db_connection() as conn:
+        item = conn.execute("SELECT * FROM items WHERE id = ?",(item_id,)).fetchone()
+        if not item:
+            raise HTTPException(status_code=404,detail="Товар не найден")
+        return dict(item)
 
 @app.post("/items", tags=["Администрирование"], status_code=201)
 async def create_item(
     name: str = Form(...),
     storage_sector: int = Form(...),
-    quantity: int = Form(...),
     weight: float = Form(0.0),
-    price: int = Form(...),  
+    quantity: int = Form(...),
     is_dangerous: bool = Form(False),
     image_file: UploadFile = File(...)
 ):
-    try:
-        
-        if not image_file:
-            raise HTTPException(status_code=400, detail="Файл изображения обязателен")
-        
-        
-        file_extension = os.path.splitext(image_file.filename)[1]
-        unique_filename = f"{datetime.now().timestamp()}{file_extension}"
-        file_path = f"static/img/{unique_filename}"
-        
-        # Сохраняем файл
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(image_file.file, buffer)
-        
-        # Генерируем новый ID
-        new_id = items[-1]["id"] + 1 if items else 1
-        
-        # Создаем новый предмет
-        new_item = {
-            "id": new_id,
-            "name": name,
-            "storage_sector": storage_sector,
-            "weight": weight,
-            "quantity": quantity,
-            "price": price,  # Используем цену из формы
-            "is_dangerous": is_dangerous,
-            "image_url": f"/{file_path}"
-        }
-        
-        items.append(new_item)
-        return new_item
-        
-    except Exception as e:
-        print(f"Ошибка при создании предмета: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    file_path = f"static/img/{image_file.filename}"
+    with open(file_path,"wb") as buffer:
+        shutil.copyfileobj(image_file.file,buffer)
+    with get_db_connection() as conn:
+        conn.execute('''
+        INSERT INTO items (name,storage_sector,weight,quantity,is_dangerous,image)
+        VALUES (?,?,?,?,?,?)
+                     ''',(name,storage_sector,weight,quantity,int(is_dangerous),f"/{file_path}"))        
+        conn.commit()
+    return {"message":"Успешно добавлено!"}
 
+@app.put("/items/{item_id}", tags=["Администрирование"])
+def update_item(item_id: int, updated_item: ItemUpdate):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE items
+            SET name = ?, storage_sector = ?,weight = ?,quantity = ?,is_dangerous = ?, image = ?
+            WHERE id = ?
+            ''',(
+                updated_item.name,
+                updated_item.storage_sector,
+                updated_item.weight,
+                updated_item.quantity,
+                int(updated_item.is_dangerous),
+                item_id
+            ))
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Товар не найден")
+    return {"message":"Данные обновлены"}
+    
+    
+@app.delete("/items/{item_id}", tags=["Администрирование"])
+def delete_item(item_id: int, confirm: bool = Query(False)):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        item = cursor.execute("SELECT is_dangerous FROM items WHERE id=?",(item_id,)).fetchone()
+        
+        if not item:
+            raise HTTPException(status_code=404, detail="Товар не найден")
+
+        if item['is_dangerous'] == 1 and not confirm:
+            raise HTTPException (
+                status_code=400,
+                detail="Удаление опасного груза требует подтверждения(confirm=true)!"
+            )
+        cursor.execute("DELETE FROM items WHERE id = ?",(item_id,))
+        conn.commit()
+    return {"message" : "Успешно удалено"}
 
 @app.post("/cart/add/{item_id}",tags=["Корзина"])
-
 def add_to_cart(item_id:int,user_id:str):
     
-    if user_id not in user_carts:
-    
-        user_carts[user_id] = {}
-    
-    current_cart = user_carts[user_id]
-    
-    current_cart[item_id] = current_cart.get(item_id)
-    
+    with get_db_connection() as conn:
+        conn.execute('''
+            INSERT INTO cart (user_id,item_id,quantity) VALUES (?,?,1)
+            ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + 1
+            ''', (user_id,item_id))
+        conn.commit()
+        
     return {
         "status":"success",
-        "cart":current_cart
     }
     
 
 @app.get("/cart",tags=["Корзина"])
 def get_my_cart(user_id:str):
-    return user_carts.get(user_id,{})
+    with get_db_connection() as conn:
+        query = '''
+        SELECT items.*, cart.quantity as cart_quantity FROM cart
+        JOIN items ON cart.item_id = items.id WHERE cart.user_id = ?
+    '''
+    items = conn.execute(query,(user_id,)).fetchall()
+    return format_db_row(items)
+
+@app.delete("/cart/clear",tags=["Корзина"])
+def clear_cart(user_id: str):
+    with get_db_connection() as conn:
+        conn.execute("DELETE FROM cart WHERE user_id = ?", (user_id,))
+        conn.commit()
+    return {"message": " Корзина очищена"}
 
 
 
-@app.get("/items/random", tags=["Просмотр"])
-def get_random_item():
-    if not items:
-        raise HTTPException(status_code=404, detail="Нет товаров")
-    return random.choice(items)
 
-@app.get("/items/cheap", tags=["Просмотр"])
-def get_cheap_items():
-    return [item for item in items if item["price"] < 500]
-
-@app.get("/items/count", tags=["Просмотр"])
-def get_items_count():
-    return {"total": len(items)}
-
-@app.get("/items/search", tags=["Просмотр"])
-def find_by_name(name: str):
-    for item in items:
-        if item["name"].lower() == name.lower():
-            return item
-    raise HTTPException(status_code=404, detail="Товар не найден")
-
-@app.post("/items/apply-sale", tags=["Специальные предложения"])
-def apply_sale(percent: int = 10):
-    if percent < 1 or percent > 90:
-        raise HTTPException(status_code=400, detail="Процент скидки должен быть от 1 до 90")
-    
-    for item in items:
-        item["price"] = round(item["price"] * (1 - percent/100))
-    
-    return {"message": f"Скидка {percent}% применена"}
-
-@app.delete("/items/clear-all", tags=["Администрирование"])
-def clear_all():
-    items.clear()
-    return {"message": "Все товары удалены"}
-
-@app.put("/items/{item_id}", tags=["Администрирование"])
-def update_item(item_id: int, updated_item: Item):
-    for i, item in enumerate(items):
-        if item["id"] == item_id:
-            items[i] = updated_item.model_dump()
-            return {"message": "Обновлено"}
-    raise HTTPException(status_code=404, detail="Товар не найден")
-
-@app.delete("/items/{item_id}", tags=["Администрирование"])
-def delete_item(item_id: int, confirm: bool = False):
-    for index, item in enumerate(items):
-        if item["id"] == item_id:
-            if item.get("is_dangerous") and not confirm:
-                raise HTTPException(status_code=403, detail="Опасный товар! Подтвердите удаление")
-            deleted = items.pop(index)
-            return {"message": f"{deleted['name']} удален"}
-    raise HTTPException(status_code=404, detail="Товар не найден")
-
-@app.patch("/items/{item_id}/add_stock", tags=["Администрирование"])
-def add_stock(item_id: int, amount: int):
-    for item in items:
-        if item["id"] == item_id:
-            item["quantity"] += amount
-            return {"message": f"Теперь на складе: {item['quantity']}"}
-    raise HTTPException(status_code=404, detail="Товар не найден")
 
 
