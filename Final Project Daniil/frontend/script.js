@@ -91,7 +91,40 @@ function updateTime() {
     clockElement.innerText = timeString;
 }
 
-
+async function handleLike(itemId) {
+    try {
+        const response = await fetch(`/items/${itemId}/like`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Ошибка при отправке лайка');
+        }
+        
+        const data = await response.json();
+        
+        const likesSpan = document.getElementById(`likes-${itemId}`);
+        if (likesSpan) {
+            
+            likesSpan.style.transform = 'scale(1.3)';
+            setTimeout(() => {
+                likesSpan.style.transform = 'scale(1)';
+            }, 200);
+            
+            likesSpan.textContent = data.likes;
+        }
+        
+        console.log(`Товар ${itemId} получил лайк! Теперь: ${data.likes}`);
+        
+    } catch (error) {
+        console.error('Ошибка при лайке:', error);
+        alert('Не удалось поставить лайк. Попробуйте позже.');
+        }
+}
 
 function renderCards(items) {
     container.innerHTML = "";

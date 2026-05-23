@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Статистика склада</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .stat-card {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #666;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 Статистика склада</h1>
+    
+    <button onclick="loadStats()">🔄 Обновить статистику</button>
+    
+    <div class="container" id="stats-container">
+        <div class="loading">Загрузка данных...</div>
+    </div>
+
+    <script>
+        async function loadStats() {
+            const container = document.getElementById('stats-container');
+            container.innerHTML = '<div class="loading">Загрузка данных...</div>';
+            
+            try {
+                const response = await fetch('/items/stats');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Полученные данные:', data); // Для отладки
+                
+                // Обновляем HTML с полученными данными
+                displayStats(data);
+                
+            } catch (error) {
+                console.error('Ошибка при загрузке:', error);
+                container.innerHTML = '<div class="loading" style="color: red;">Ошибка загрузки данных</div>';
+            }
+        }
+        
+        function displayStats(data) {
+            const container = document.getElementById('stats-container');
+            
+            const html = `
+                <div class="stats-grid">
+                    <!-- Общая информация -->
+                    <div class="stat-card">
+                        <h3>📦 Общая информация</h3>
+                        <p>Всего предметов: <span class="stat-value" id="total-items">${data.total_items}</span></p>
+                        <p>Опасных предметов: <span class="stat-value" id="dangerous-count">${data.dangerous_count}</span></p>
+                        <p>Процент опасных: <span class="stat-value" id="dangerous-percent">${data.dangerous_percent}%</span></p>
+                        <p>Общий вес: <span class="stat-value" id="total-weight">${data.total_weight}</span> кг</p>
+                    </div>
+                    
+                    <!-- 5 самых тяжелых предметов -->
+                    <div class="stat-card">
+                        <h3>🏋️ Топ-5 самых тяжелых предметов</h3>
+                        <table>
+                            <thead>
+                                <tr><th>Название</th><th>Вес (кг)</th></tr>
+                            </thead>
+                            <tbody id="heaviest-items">
+                                ${data.five_heaviest.map(item => `
+                                    <tr>
+                                        <td>${item.name}</td>
+                                        <td>${item.weight}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Статистика по секторам -->
+                    <div class="stat-card">
+                        <h3>📍 Распределение по секторам</h3>
+                        <table>
+                            <thead>
+                                <tr><th>Сектор</th><th>Количество</th></tr>
+                            </thead>
+                            <tbody id="sectors-stats">
+                                ${data.sectors.map(sector => `
+                                    <tr>
+                                        <td>${sector.storage_sector || 'Не указан'}</td>
+                                        <td>${sector.total_items}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+        
+        
+        window.addEventListener('DOMContentLoaded', loadStats);
+        
+        
+        setInterval(loadStats, 30000);
+    </script>
+</body>
+</html>
