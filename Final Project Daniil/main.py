@@ -1,40 +1,363 @@
-from pydantic import BaseModel, Field
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from database import items
-import random
+Implement Like System for Warehouse App
+Вот полная реализация системы лайков-кликера, основанная на вашем конспекте.
+
+1. Обновлённый init_db.py (добавлена таблица likes)
+python
+import sqlite3
+
+# 1. Подключаемся к файлу (если его нет, он создастся автоматически)
+connection = sqlite3.connect('warehouse.db')
+
+# 2. Создаем "курсор" --- это наш инструмент для выполнения команд
+cursor = connection.cursor()
+
+# 3. Пишем SQL-запрос для создания таблицы товаров
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    storage_sector INTEGER,
+    weight REAL,
+    quantity INTEGER,
+    is_dangerous INTEGER DEFAULT 0,
+    image TEXT
+)
+''')
+
+# 4. Создаём таблицу для корзины (многие ко многим)
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS cart (
+    user_id TEXT,
+    item_id INTEGER,
+    quantity INTEGER DEFAULT 1,
+    PRIMARY KEY (user_id, item_id),
+    FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE
+)
+''')
+
+# 5. ★ ЗВЕЗДОЧКА ★ Создаём таблицу для лайков-кликера
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS likes (
+    item_id INTEGER PRIMARY KEY,
+    count INTEGER DEFAULT 0,
+    FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE
+)
+''')
+
+# Сохраняем изменения и закрываем соединение
+connection.commit()
+connection.close()
+
+print("База данных успешно создана! (включая таблицу likes)")
+2. Обновлённый main.py (добавлен эндпоинт /items/{item_id}/like)
+python
+import sqlite3
 import shutil
-import os
-from datetime import datetime
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-class Item(BaseModel):
-    id: int = Field(..., gt=0)
-    name: str = Field(..., min_length=1, max_length=50)
-    storage_sector: int = Field(..., ge=1, le=99)
-    weight: float = Field(..., gt=0)
-    quantity: int = Field(default=1, gt=0)
-    price: int = Field(..., gt=0)
-    is_dangerous: bool = Field(default=False)
-    image_url: str = Field(default="")
+app = FastAPI(title="Склад на SQLite")
 
-app = FastAPI(
-    title="Digital Inventory System",
-    description="Система управления складом будущего.",
-    version="1.0.0"
-)
+# Настройка CORS и статики
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# CORS настройки
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://127.0.0.1:5500", "http://localhost:5500", "*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Модель данных для обновления
+class ItemUpdate(BaseModel):
+    name: str
+    storage_sector: int
+    weight: float
+    quantity: int
+    is_dangerous: bool
+    image: str | None = None
 
-# Создаем папки
-os.makedirs("static", exist_ok=True)
+# Функция подключения к БД
+def get_db_connection():
+    conn = sqlite3.connect('warehouse.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+# Вспомогательный форматировщик
+def format_db_row(rows):
+    return [dict(row) for row in rows]
+
+
+# --- МЕТОДЫ ДЛЯ ТОВАРОВ (CRUD) ---
+
+@app.get("/items", tags=["Товары"])
+def get_all_items():
+    with get_db_connection() as conn:
+        items = conn.execute("SELECT * FROM items").fetchall()
+        result = format_db_row(items)
+        
+        # ★ Добавляем количество лайков к каждому товару
+        for item in result:
+            likes_data = conn.execute("SELECT count FROM likes WHERE item_id = ?", (item['id'],)).fetchone()
+            item['likes'] = likes_data['count'] if likes_data else 0
+        
+        return result
+
+@app.get("/items/{item_id}", tags=["Товары"])
+def get_one_item(item_id: int):
+    with get_db_connection() as conn:
+        item = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
+        if not item:
+            raise HTTPException(status_code=404, detail="Товар не найден")
+        
+        result = dict(item)
+        likes_data = conn.execute("SELECT count FROM likes WHERE item_id = ?", (item_id,)).fetchone()
+        result['likes'] = likes_data['count'] if likes_data else 0
+        
+        return result
+
+@app.post("/items", tags=["Товары"], status_code=201)
+async def create_item(
+    name: str = Form(...),
+    storage_sector: int = Form(...),
+    weight: float = Form(...),
+    quantity: int = Form(...),
+    is_dangerous: bool = Form(False),
+    image_file: UploadFile = File(...)
+):
+    file_path = f"static/img/{image_file.filename}"
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(image_file.file, buffer)
+
+    with get_db_connection() as conn:
+        cursor = conn.execute('''
+            INSERT INTO items (name, storage_sector, weight, quantity, is_dangerous, image)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (name, storage_sector, weight, quantity, int(is_dangerous), f"/{file_path}"))
+        
+        item_id = cursor.lastrowid
+        
+        # ★ Автоматически создаём запись о лайках для нового товара
+        conn.execute("INSERT INTO likes (item_id, count) VALUES (?, 0)", (item_id,))
+        conn.commit()
+    
+    return {"message": "Успешно добавлено"}
+
+@app.put("/items/{item_id}", tags=["Товары"])
+def update_item(item_id: int, updated_item: ItemUpdate):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE items
+            SET name = ?, storage_sector = ?, weight = ?, quantity = ?, is_dangerous = ?, image = ?
+            WHERE id = ?
+        ''', (
+            updated_item.name,
+            updated_item.storage_sector,
+            updated_item.weight,
+            updated_item.quantity,
+            int(updated_item.is_dangerous),
+            updated_item.image,
+            item_id
+        ))
+        conn.commit()
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    return {"message": "Данные обновлены"}
+
+@app.delete("/items/{item_id}", tags=["Товары"])
+def delete_item(item_id: int, confirm: bool = Query(False)):
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        # Проверяем статус опасности товара
+        item = cursor.execute("SELECT is_dangerous FROM items WHERE id = ?", (item_id,)).fetchone()
+        if not item:
+            raise HTTPException(status_code=404, detail="Товар не найден")
+        
+        if item["is_dangerous"] == 1 and not confirm:
+            raise HTTPException(
+                status_code=400,
+                detail="Удаление опасного груза требует подтверждения (confirm=true)!"
+            )
+        
+        # ★ Запись в likes удалится автоматически благодаря ON DELETE CASCADE
+        cursor.execute("DELETE FROM items WHERE id = ?", (item_id,))
+        conn.commit()
+    
+    return {"message": "Успешно удалено"}
+
+
+# ★★★ СИСТЕМА ЛАЙКОВ-КЛИКЕРА (ЗАДАНИЕ СО ЗВЕЗДОЧКОЙ) ★★★
+
+@app.post("/items/{item_id}/like", tags=["Лайки"])
+def add_like(item_id: int):
+    """
+    Эндпоинт для кликер-системы лайков.
+    При каждом запросе увеличивает счётчик лайков для товара на 1.
+    Использует UPSERT (INSERT ON CONFLICT) для автоматического создания записи.
+    """
+    with get_db_connection() as conn:
+        # Проверяем, существует ли товар
+        item = conn.execute("SELECT id FROM items WHERE id = ?", (item_id,)).fetchone()
+        if not item:
+            raise HTTPException(status_code=404, detail="Товар не найден")
+        
+        # ★ UPSERT: если запись есть — обновляем, если нет — создаём
+        conn.execute('''
+            INSERT INTO likes (item_id, count) 
+            VALUES (?, 1)
+            ON CONFLICT(item_id) DO UPDATE SET count = count + 1
+        ''', (item_id,))
+        
+        conn.commit()
+        
+        # Получаем обновлённое количество лайков
+        result = conn.execute("SELECT count FROM likes WHERE item_id = ?", (item_id,)).fetchone()
+        new_count = result['count'] if result else 0
+    
+    return {"item_id": item_id, "likes": new_count}
+
+
+# --- МЕТОДЫ ДЛЯ КОРЗИНЫ ---
+
+@app.post("/cart/add/{item_id}", tags=["Корзина"])
+def add_to_cart(item_id: int, user_id: str):
+    with get_db_connection() as conn:
+        conn.execute('''
+            INSERT INTO cart (user_id, item_id, quantity) VALUES (?, ?, 1)
+            ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + 1
+        ''', (user_id, item_id))
+        conn.commit()
+    
+    return {"status": "success"}
+
+@app.get("/cart", tags=["Корзина"])
+def get_cart(user_id: str):
+    with get_db_connection() as conn:
+        query = '''
+            SELECT items.*, cart.quantity as cart_quantity
+            FROM cart
+            JOIN items ON cart.item_id = items.id
+            WHERE cart.user_id = ?
+        '''
+        items = conn.execute(query, (user_id,)).fetchall()
+        result = format_db_row(items)
+        
+        # Добавляем лайки к каждому товару в корзине
+        for item in result:
+            likes_data = conn.execute("SELECT count FROM likes WHERE item_id = ?", (item['id'],)).fetchone()
+            item['likes'] = likes_data['count'] if likes_data else 0
+        
+        return result
+
+@app.delete("/cart/clear", tags=["Корзина"])
+def clear_cart(user_id: str):
+    with get_db_connection() as conn:
+        conn.execute("DELETE FROM cart WHERE user_id = ?", (user_id,))
+        conn.commit()
+    
+    return {"message": "Корзина очищена"}
+3. Фронтенд: добавляем лайки в HTML и JavaScript
+Добавьте в карточку товара (HTML):
+html
+<div class="card" data-item-id="{{ item.id }}">
+    <img src="{{ item.image }}" alt="{{ item.name }}">
+    <h3>{{ item.name }}</h3>
+    <p>Сектор: {{ item.storage_sector }}</p>
+    <p>Вес: {{ item.weight }} кг</p>
+    <p>Количество: {{ item.quantity }}</p>
+    
+    <!-- ★ Блок лайков-кликера ★ -->
+    <div class="likes-section">
+        <button class="like-button" onclick="handleLike({{ item.id }})">
+            ❤️
+        </button>
+        <span class="likes-count" id="likes-{{ item.id }}">
+            {{ item.likes | default(0) }}
+        </span>
+        <span class="likes-label">лайков</span>
+    </div>
+    
+    <button onclick="addToCart({{ item.id }})">В корзину</button>
+</div>
+Добавьте CSS (стили для кнопки лайка):
+css
+.likes-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0;
+    padding: 5px;
+    background: #f5f5f5;
+    border-radius: 20px;
+}
+
+.like-button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    padding: 0 5px;
+}
+
+.like-button:hover {
+    transform: scale(1.2);
+}
+
+.like-button:active {
+    transform: scale(0.95);
+}
+
+.likes-count {
+    font-size: 18px;
+    font-weight: bold;
+    color: #e74c3c;
+    min-width: 30px;
+    text-align: center;
+}
+
+.likes-label {
+    font-size: 14px;
+    color: #666;
+}
+Добавьте JavaScript (script.js):
+javascript
+// ★ Функция для обработки лайков (кликер)
+async function handleLike(itemId) {
+    try {
+        const response = await fetch(`/items/${itemId}/like`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Ошибка при отправке лайка');
+        }
+        
+        const data = await response.json();
+        
+        // Мгновенно обновляем счётчик на странице
+        const likesSpan = document.getElementById(`likes-${itemId}`);
+        if (likesSpan) {
+            // Небольшая анимация при клике
+            likesSpan.style.transform = 'scale(1.3)';
+            setTimeout(() => {
+                likesSpan.style.transform = 'scale(1)';
+            }, 200);
+            
+            likesSpan.textContent = data.likes;
+        }
+        
+        console.log(`Товар ${itemId} получил лайк! Теперь: ${data.likes}`);
+        
+    } catch (error) {
+        console.error('Ошибка при лайке:', error);
+        alert('Не удалось поставить лайк. Попробуйте позже.');
+    }
+        }os.makedirs("static", exist_ok=True)
 os.makedirs("static/img", exist_ok=True)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
