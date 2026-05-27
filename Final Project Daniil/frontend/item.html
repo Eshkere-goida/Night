@@ -24,13 +24,13 @@
                 <h1 id="item-name" style="color: #2c3e50;margin-bottom: 15px;" >Загрузка...</h1>
                 <p><strong>Сектор:</strong> <span id="item-sector">...</span></p>
                 <p><strong>Количество:</strong> <span id="item-quantity">...</span></p>
-                <p><strong>Вес:</strong> <span id="item-sector">...</span></p>
+                <p><strong>Вес:</strong> <span id="item-weight">...</span></p>
                 <div id="danger-badge" style="display: none; margin-top: 15px; background: #e74c3c; color: white; padding: 5px 10px; border-radius: 4px;">
                     ⚠️ Опасный груз
                 </div>
                 <div class="likes-section">
-                    <button class="like-button" onclick="handleLike({item,id})">❤️</button>
-                    <span class="likes-count" id="likes-{{ item.id }}">{{ item.likes | default(0) }}</span>
+                    <button id="like-btn">❤️</button>
+                    <span id="likes-count">0</span>
                     <span class="likes-label">лайков</span>
                 </div>
                 <div style="margin-top: 30px;">

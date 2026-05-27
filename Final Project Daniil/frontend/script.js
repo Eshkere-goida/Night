@@ -159,12 +159,12 @@ function renderCards(items) {
 }
 
 function loadStats() {
-    fetch("http://127.0.0.1/items/count")
+    fetch("http://127.0.0.1:8000/items/stats")
         .then(res => res.json())
         .then(data => {
-            document.getElementById('total-count').innerText = data.total;
+            document.getElementById('total-count').innerText = data.total_items;
         })
-        .catch(err => console.error("Ошибка при получении статистики:",err));
+        .catch(err => console.error("Ошибка при получении статистики:", err));
 }
 
 const searchInput = document.getElementById('search-input');

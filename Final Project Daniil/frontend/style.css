@@ -17,7 +17,7 @@
 
 :root {
     --bg-color:beige;
-    --text-color:color:rgb(49, 51, 62);
+    --text-color:rgb(49, 51, 62);
     --card-bg: linear-gradient(#d6e1b2,#acdcac);
     font-family: monospace;
     font-size: 17px;
@@ -26,13 +26,14 @@
 
 body.dark-theme {
     --bg-color: #341717;
-    --text-color: #ecf0f1;
+    --text-color: #e2dfdf;
     --card-bg: linear-gradient(#e1b2b2,#a73a3a);
 
 }
 body.dark-theme .card {
     background: linear-gradient(#290303,#a73a3a);
     color: #ecf0f1;
+    
 }
 
 body {
@@ -44,21 +45,15 @@ body {
 
 
 header {
-    --background-color: rgb(219, 236, 187);
-    --color1:rgb(49, 51, 62);
+    background-color: rgb(219, 236, 187);
+    color: rgb(49, 51, 62);
     padding: 15px 0;
+    transition: background-color 0.3s, color 0.3s;
 }
 
-header.dark-theme {
-    --background-color: #330404;
-    --color1:rgb(172, 168, 193);
-    padding: 15px 0;
-}
-
-header {
-    background-color: var(--background-color);
-    color:var(--color1);
-    transition: 0.3s;
+body.dark-theme header {
+    background-color: #330404;
+    color: rgb(172, 168, 193);
 }
 
 
@@ -159,7 +154,7 @@ header nav a:hover {
 .card-title {
     margin: 5px 0;
     font-size: 1.2rem;
-    color: #2d3436;
+    color: #606566;
 
 }
 .card-description {
@@ -206,23 +201,53 @@ header nav a:hover {
     background-color: rgba(255,77,77, 0.05);
 }
 
-.clock {
-    display: flex;
-    justify-self: right;
-    margin-right: 20px;
-
-}
-
 .btn-theme {
-    display: flex;
-    justify-self: left;
-    background: beige;
+    background: rgba(255,255,255,0.15);
+    color: inherit;
+    border: 1px solid rgba(0,0,0,0.15);
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.3s;
+    white-space: nowrap;
+}
+.btn-theme:hover { background: rgba(255,255,255,0.3); }
+
+body.dark-theme .btn-theme {
+    border-color: rgba(255,255,255,0.15);
 }
 
-.refresh-btn {
+#danger-filter {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.3s;
+}
+#danger-filter:hover { background: #c0392b; }
+
+.header-right-tools {
     display: flex;
-    justify-self: right;
-    margin-right: 20px;
+    align-items: center;
+    gap: 8px;
+    margin-left: 16px;
+}
+
+.header-left-tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.clock {
+    font-size: 0.9rem;
+    font-weight: bold;
+    opacity: 0.8;
+    white-space: nowrap;
 }
 
 .form-container {
@@ -407,7 +432,7 @@ header nav a:hover {
 }
 
 
-/* Добавьте в style.css */
+
 
 /* Стили для полей ввода */
 .form-container input[type="text"],
