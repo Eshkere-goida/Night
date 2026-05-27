@@ -1,66 +1,17 @@
 import sqlite3
 import shutil
-from fastapi import FastAPI, HTTPException, UploadFile,File,Form,Query
+import csv
+import os
+from io import StringIO
+
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any
-from contextlib import asynccontextmanager
-import os
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Этот код выполняется при запуске сервера
-    print("🔄 Инициализация базы данных...")
-    
-    # Проверяем и создаем таблицы если нужно
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        
-        # Проверяем существование таблицы items
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='items'")
-        if not cursor.fetchone():
-            print("📋 Создание таблиц...")
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                storage_sector INTEGER,
-                weight REAL,
-                quantity INTEGER,
-                price REAL DEFAULT 0,
-                is_dangerous INTEGER DEFAULT 0,
-                image TEXT
-            )
-            ''')
-            
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS cart (
-                user_id TEXT,
-                item_id INTEGER,
-                quantity INTEGER DEFAULT 1,
-                PRIMARY KEY (user_id, item_id),
-                FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE
-            )
-            ''')
-            
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS likes (
-                item_id INTEGER PRIMARY KEY,
-                count INTEGER DEFAULT 0,
-                FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE
-            )
-            ''')
-            
-            conn.commit()
-            print("✅ Таблицы созданы")
-        else:
-            print("✅ Таблицы уже существуют")
-    
-    yield
-    # Этот код выполняется при остановке сервера
-    print("👋 Завершение работы сервера")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = FastAPI(
     title="Digital Inventory System",
@@ -76,168 +27,189 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+# Раздача статических файлов (картинки, HTML-страницы)
+static_dir = os.path.join(BASE_DIR, "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
 
 class ItemUpdate(BaseModel):
     name: str
     storage_sector: int
-    weight: float 
+    weight: float
     quantity: int
     is_dangerous: bool
     image: str | None = None
-    
+
+
 def get_db_connection():
-    db_path = 'warehouse.db'
-    print(f"🔍 Подключение к БД: {os.path.abspath(db_path)}")  # Отладка
-    print(f"📁 Файл существует: {os.path.exists(db_path)}")   # Отладка
-    
+    db_path = os.path.join(BASE_DIR, 'warehouse.db')
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def format_db_row(rows):
     return [dict(row) for row in rows]
 
+
+# ─────────────────────────────────────────────
+# СТАТИСТИКА (ETL — Компонент 1)
+# ─────────────────────────────────────────────
+
 def get_stats() -> Dict[str, Any]:
-    """Возвращает статистику в виде словаря"""
+    """Считает агрегаты прямо в SQLite, без загрузки в память Python."""
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            
-            # Проверяем существование таблицы
+
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='items'")
             if not cursor.fetchone():
-                print("❌ Таблица items не найдена!")
                 return {
-                    "sectors": [],
-                    "five_heaviest": [],
-                    "total_weight": 0,
-                    "dangerous_percent": 0,
-                    "total_items": 0,
-                    "dangerous_count": 0
+                    "sectors": [], "five_heaviest": [],
+                    "total_weight": 0, "dangerous_percent": 0,
+                    "total_items": 0, "dangerous_count": 0
                 }
-            
-            # 1. Статистика по секторам
+
+            # Распределение по секторам
             sectors_data = cursor.execute(
                 "SELECT storage_sector, COUNT(*) as total_items FROM items GROUP BY storage_sector"
             ).fetchall()
-            sectors = format_db_row(sectors_data)
-            
-            # 2. 5 самых тяжелых предметов
+
+            # Топ-5 самых тяжёлых
             five_heaviest = cursor.execute(
                 "SELECT name, weight FROM items ORDER BY weight DESC LIMIT 5"
             ).fetchall()
-            five_heaviest_dicts = format_db_row(five_heaviest)
-            
-            # 3. Общий вес
-            total_weight_result = cursor.execute(
-                "SELECT COALESCE(SUM(weight*quantity), 0) as total_weight FROM items"
+
+            # Абсолютный тоннаж
+            total_weight_row = cursor.execute(
+                "SELECT COALESCE(SUM(weight * quantity), 0) as total_weight FROM items"
             ).fetchone()
-            total_weight = total_weight_result['total_weight'] if total_weight_result else 0
-            
-            # 4. Процент опасных предметов
-            total_items_result = cursor.execute("SELECT COUNT(*) FROM items").fetchone()
-            total_items = total_items_result[0] if total_items_result else 0
-            
-            dangerous_count_result = cursor.execute(
+            total_weight = total_weight_row['total_weight'] if total_weight_row else 0
+
+            # Процент опасных
+            total_items = cursor.execute("SELECT COUNT(*) FROM items").fetchone()[0]
+            dangerous_count = cursor.execute(
                 "SELECT COUNT(*) FROM items WHERE is_dangerous = 1"
-            ).fetchone()
-            dangerous_count = dangerous_count_result[0] if dangerous_count_result else 0
-            
-            dangerous_percent = (dangerous_count / total_items * 100) if total_items > 0 else 0
-            
+            ).fetchone()[0]
+            dangerous_percent = round((dangerous_count / total_items * 100), 2) if total_items > 0 else 0
+
             return {
-                "sectors": sectors,
-                "five_heaviest": five_heaviest_dicts,
+                "sectors": format_db_row(sectors_data),
+                "five_heaviest": format_db_row(five_heaviest),
                 "total_weight": float(total_weight),
-                "dangerous_percent": round(dangerous_percent, 2),
+                "dangerous_percent": dangerous_percent,
                 "total_items": total_items,
                 "dangerous_count": dangerous_count
             }
     except Exception as e:
-        print(f"❌ Ошибка в get_stats: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"Ошибка в get_stats: {e}")
         return {
-            "sectors": [],
-            "five_heaviest": [],
-            "total_weight": 0,
-            "dangerous_percent": 0,
-            "total_items": 0,
-            "dangerous_count": 0
+            "sectors": [], "five_heaviest": [],
+            "total_weight": 0, "dangerous_percent": 0,
+            "total_items": 0, "dangerous_count": 0
         }
-        
+
+
 @app.get("/items/stats", tags=["Статистика"])
 async def get_items_stats():
-    stats = get_stats()
-    return stats
+    return get_stats()
 
 
-@app.get("/stats-page", response_class=HTMLResponse, tags=["Страницы"])
-async def stats_page():
-    """Страница со статистикой"""
-    with open("templates/stats.html", "r", encoding="utf-8") as f:
-        return f.read()
+@app.get("/items/count", tags=["Статистика"])
+def get_items_count():
+    """Быстрый счётчик для шапки сайта."""
+    with get_db_connection() as conn:
+        total = conn.execute("SELECT COUNT(*) FROM items").fetchone()[0]
+    return {"total": total}
+
+
+
+# ─────────────────────────────────────────────
+# ETL — Компонент 2: CSV-экспорт
+# ─────────────────────────────────────────────
+
+@app.get("/items/export/csv", tags=["ETL / Экспорт"])
+def export_items_csv():
+    """
+    Экспортирует все товары в CSV-файл.
+    Браузер автоматически скачает файл warehouse_export.csv.
+    """
+    with get_db_connection() as conn:
+        rows = conn.execute("SELECT * FROM items").fetchall()
+
+    # Сериализация в буфер в памяти (без записи на диск)
+    output = StringIO()
+    writer = csv.writer(output, delimiter=';')
+
+    # Заголовки колонок
+    writer.writerow(['ID', 'Название', 'Сектор', 'Вес', 'Количество', 'Опасен', 'Изображение'])
+
+    for row in rows:
+        writer.writerow([
+            row['id'],
+            row['name'],
+            row['storage_sector'],
+            row['weight'],
+            row['quantity'],
+            'Да' if row['is_dangerous'] else 'Нет',
+            row['image'] or ''
+        ])
+
+    csv_content = output.getvalue()
+
+    return Response(
+        content=csv_content.encode('utf-8-sig'),  # utf-8-sig = BOM для Excel
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=warehouse_export.csv"
+        }
+    )
+
+
+# ─────────────────────────────────────────────
+# ТОВАРЫ
+# ─────────────────────────────────────────────
 
 @app.get("/items", tags=["Товары"])
 def get_all_items():
     with get_db_connection() as conn:
         items = conn.execute("SELECT * FROM items").fetchall()
         result = format_db_row(items)
-        
         for item in result:
-            likes_data = conn.execute("SELECT count FROM likes WHERE item_id = ?", (item['id'],)).fetchone()
+            likes_data = conn.execute(
+                "SELECT count FROM likes WHERE item_id = ?", (item['id'],)
+            ).fetchone()
             item['likes'] = likes_data['count'] if likes_data else 0
-        
-        return result
-
-@app.get("/cart",tags=["Корзина"])
-def get_my_cart(user_id:str):
-    with get_db_connection() as conn:
-        query = '''
-        SELECT items.*, cart.quantity as cart_quantity FROM cart
-        JOIN items ON cart.item_id = items.id WHERE cart.user_id = ?
-    '''
-    items = conn.execute(query,(user_id,)).fetchall()
-    return format_db_row(items)
-
-
-@app.get("/debug/db", tags=["Отладка"])
-def debug_database():
-    """Проверка подключения к БД"""
-    import os
-    db_path = 'warehouse.db'
-    
-    result = {
-        "db_file_exists": os.path.exists(db_path),
-        "db_absolute_path": os.path.abspath(db_path),
-        "tables": [],
-        "items_count": 0
-    }
-    
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-            result["tables"] = [row[0] for row in cursor.fetchall()]
-            
-            if "items" in result["tables"]:
-                cursor.execute("SELECT COUNT(*) FROM items")
-                result["items_count"] = cursor.fetchone()[0]
-    except Exception as e:
-        result["error"] = str(e)
-    
     return result
+
+
+@app.get("/items/search", tags=["Товары"])
+def search_items(name: str):
+    """Поиск по названию (без учёта регистра)."""
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM items WHERE LOWER(name) LIKE LOWER(?)",
+            (f"%{name}%",)
+        ).fetchall()
+    return format_db_row(rows)
+
 
 @app.get("/items/{item_id}", tags=["Просмотр"])
 def get_one_item(item_id: int):
     with get_db_connection() as conn:
-        item = conn.execute("SELECT * FROM items WHERE id = ?",(item_id,)).fetchone()
+        item = conn.execute("SELECT * FROM items WHERE id = ?", (item_id,)).fetchone()
         if not item:
-            raise HTTPException(status_code=404,detail="Товар не найден")
-        return dict(item)
-    
-    
+            raise HTTPException(status_code=404, detail="Товар не найден")
+        result = dict(item)
+        likes_data = conn.execute(
+            "SELECT count FROM likes WHERE item_id = ?", (item_id,)
+        ).fetchone()
+        result['likes'] = likes_data['count'] if likes_data else 0
+    return result
 
+
+@app.post("/items", status_code=201, tags=["Товары"])
 async def create_item(
     name: str = Form(...),
     storage_sector: int = Form(...),
@@ -255,13 +227,10 @@ async def create_item(
             INSERT INTO items (name, storage_sector, weight, quantity, is_dangerous, image)
             VALUES (?, ?, ?, ?, ?, ?)
         ''', (name, storage_sector, weight, quantity, int(is_dangerous), f"/{file_path}"))
-        
         item_id = cursor.lastrowid
-        
-        
         conn.execute("INSERT INTO likes (item_id, count) VALUES (?, 0)", (item_id,))
         conn.commit()
-    
+
     return {"message": "Успешно добавлено"}
 
 
@@ -270,99 +239,90 @@ def update_item(item_id: int, updated_item: ItemUpdate):
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute('''
-            UPDATE items
-            SET name = ?, storage_sector = ?,weight = ?,quantity = ?,is_dangerous = ?, image = ?
-            WHERE id = ?
-            ''',(
-                updated_item.name,
-                updated_item.storage_sector,
-                updated_item.weight,
-                updated_item.quantity,
-                int(updated_item.is_dangerous),
-                item_id
-            ))
+            UPDATE items SET name=?, storage_sector=?, weight=?, quantity=?, is_dangerous=?, image=?
+            WHERE id=?
+        ''', (
+            updated_item.name,
+            updated_item.storage_sector,
+            updated_item.weight,
+            updated_item.quantity,
+            int(updated_item.is_dangerous),
+            updated_item.image,
+            item_id
+        ))
         conn.commit()
         if cursor.rowcount == 0:
             raise HTTPException(status_code=404, detail="Товар не найден")
-    return {"message":"Данные обновлены"}
-    
+    return {"message": "Данные обновлены"}
+
+
 @app.post("/items/{item_id}/like", tags=["Лайки"])
 def add_like(item_id: int):
-    
     with get_db_connection() as conn:
-        
         item = conn.execute("SELECT id FROM items WHERE id = ?", (item_id,)).fetchone()
         if not item:
             raise HTTPException(status_code=404, detail="Товар не найден")
-        
-        
         conn.execute('''
-            INSERT INTO likes (item_id, count) 
+            INSERT INTO likes (item_id, count)
             VALUES (?, 1)
             ON CONFLICT(item_id) DO UPDATE SET count = count + 1
         ''', (item_id,))
-        
         conn.commit()
-        
-    
         result = conn.execute("SELECT count FROM likes WHERE item_id = ?", (item_id,)).fetchone()
         new_count = result['count'] if result else 0
-    
     return {"item_id": item_id, "likes": new_count}
 
-    
+
 @app.delete("/items/{item_id}", tags=["Товары"])
 def delete_item(item_id: int, confirm: bool = Query(False)):
     with get_db_connection() as conn:
         cursor = conn.cursor()
-    
-        item = cursor.execute("SELECT is_dangerous FROM items WHERE id = ?", (item_id,)).fetchone()
+        item = cursor.execute(
+            "SELECT is_dangerous FROM items WHERE id = ?", (item_id,)
+        ).fetchone()
         if not item:
             raise HTTPException(status_code=404, detail="Товар не найден")
-        
         if item["is_dangerous"] == 1 and not confirm:
             raise HTTPException(
                 status_code=400,
                 detail="Удаление опасного груза требует подтверждения (confirm=true)!"
             )
-        
-        
         cursor.execute("DELETE FROM items WHERE id = ?", (item_id,))
         conn.commit()
-    
     return {"message": "Успешно удалено"}
 
 
+# ─────────────────────────────────────────────
+# КОРЗИНА
+# ─────────────────────────────────────────────
 
-    
+@app.get("/cart", tags=["Корзина"])
+def get_my_cart(user_id: str):
+    with get_db_connection() as conn:
+        query = '''
+            SELECT items.*, cart.quantity as cart_quantity
+            FROM cart
+            JOIN items ON cart.item_id = items.id
+            WHERE cart.user_id = ?
+        '''
+        items = conn.execute(query, (user_id,)).fetchall()
+    return format_db_row(items)
 
-    
 
-@app.post("/cart/add/{item_id}",tags=["Корзина"])
-def add_to_cart(item_id:int,user_id:str):
-    
+@app.post("/cart/add/{item_id}", tags=["Корзина"])
+def add_to_cart(item_id: int, user_id: str):
     with get_db_connection() as conn:
         conn.execute('''
-            INSERT INTO cart (user_id,item_id,quantity) VALUES (?,?,1)
+            INSERT INTO cart (user_id, item_id, quantity) VALUES (?, ?, 1)
             ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + 1
-            ''', (user_id,item_id))
+        ''', (user_id, item_id))
         conn.commit()
-        
-    return {
-        "status":"success",
-    }
-    
+    return {"status": "success"}
 
 
-@app.delete("/cart/clear",tags=["Корзина"])
+@app.delete("/cart/clear", tags=["Корзина"])
 def clear_cart(user_id: str):
     with get_db_connection() as conn:
         conn.execute("DELETE FROM cart WHERE user_id = ?", (user_id,))
         conn.commit()
-    return {"message": " Корзина очищена"}
-
-
-
-
-
-
+    return {"message": "Корзина очищена"}

@@ -1,8 +1,12 @@
 import sqlite3
 from database import items
+import os
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def migrate():
-    conn = sqlite3.connect('warehouse.db')
+    conn = sqlite3.connect(os.path.join(BASE_DIR, 'warehouse.db'))
     cursor = conn.cursor()
     
     # Проверяем существует ли таблица

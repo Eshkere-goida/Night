@@ -1,39 +1,64 @@
+# Хранилище данных склада
 
 items = [
     {
-        "id" : 1,
-        "name" : "Электро-Самокат",
-        "storage_sector": 12,
-        "weight" : 40,
-        "quantity": 3,
-        "price" : 300,
-        "is_dangerous" : False
+        "id": 1,
+        "name": "Дрель аккумуляторная",
+        "storage_sector": 3,
+        "weight": 1.5,
+        "quantity": 15,
+        "is_dangerous": False,
+        "price": 4500,
+        "image_url": "/static/img/drill.jpg"
     },
     {
-        "id" : 2,
-        "name" : "Набор носков",
-        "storage_sector":5,
-        "weight" : 5,
-        "quantity": 3,
-        "price" : 40,
-        "is_dangerous" : False
+        "id": 2,
+        "name": "Ящик с инструментами",
+        "storage_sector": 1,
+        "weight": 12.0,
+        "quantity": 8,
+        "is_dangerous": False,
+        "price": 3200,
+        "image_url": "/static/img/toolbox.jpg"
     },
     {
-        "id" : 3,
-        "name" : "Урановый стержень",
-        "storage_sector":8,
-        "weight" : 80,
-        "quantity": 1,
-        "price" : 800,
-        "is_dangerous" : True
+        "id": 3,
+        "name": "Кислота серная",
+        "storage_sector": 5,
+        "weight": 25.0,
+        "quantity": 4,
+        "is_dangerous": True,
+        "price": 1500,
+        "image_url": "/static/img/acid.jpg"
     },
     {
-        "id" : 4,
-        "name" : "Фосфорная кислота",
-        "storage_sector":10,
-        "weight" : 1,
-        "quantity": 6,
-        "price" : 450,
-        "is_dangerous" : True
+        "id": 4,
+        "name": "Противогаз",
+        "storage_sector": 2,
+        "weight": 0.8,
+        "quantity": 20,
+        "is_dangerous": False,
+        "price": 2800,
+        "image_url": "/static/img/gasmask.jpg"
+    },
+    {
+        "id": 5,
+        "name": "Бензин",
+        "storage_sector": 4,
+        "weight": 18.5,
+        "quantity": 12,
+        "is_dangerous": True,
+        "price": 950,
+        "image_url": "/static/img/gasoline.jpg"
+    },
+    {
+        "id": 6,
+        "name": "Огнетушитель",
+        "storage_sector": 1,
+        "weight": 5.2,
+        "quantity": 10,
+        "is_dangerous": False,
+        "price": 2100,
+        "image_url": "/static/img/extinguisher.jpg"
     }
 ]

@@ -1,18 +1,14 @@
 import sqlite3
 import os
 
-def init_database():
-    # Удаляем старую БД если нужно (осторожно!)
-    # if os.path.exists('warehouse.db'):
-    #     os.remove('warehouse.db')
-    #     print("Старая БД удалена")
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+db_path = os.path.join(BASE_DIR, 'warehouse.db')
+connection = sqlite3.connect(db_path)
+cursor = connection.cursor()
     
-    connection = sqlite3.connect('warehouse.db')
-    cursor = connection.cursor()
-    
-    # Создаем таблицу items
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS items (
+   
+cursor.execute('''    CREATE TABLE IF NOT EXISTS items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         storage_sector INTEGER,
@@ -22,10 +18,10 @@ def init_database():
         is_dangerous INTEGER DEFAULT 0,
         image TEXT
     )
-    ''')
+''')
     
-    # Создаем таблицу cart
-    cursor.execute('''
+    
+cursor.execute('''
     CREATE TABLE IF NOT EXISTS cart (
         user_id TEXT,
         item_id INTEGER,
@@ -33,28 +29,16 @@ def init_database():
         PRIMARY KEY (user_id, item_id),
         FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE
     )   
-    ''')
+''')
     
-    # Создаем таблицу likes
-    cursor.execute('''
+    
+cursor.execute('''
     CREATE TABLE IF NOT EXISTS likes (
         item_id INTEGER PRIMARY KEY,
         count INTEGER DEFAULT 0,
         FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE
     )
-    ''')
+''')
     
-    connection.commit()
+connection.commit()
     
-    # Проверяем создание
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-    tables = cursor.fetchall()
-    print("Созданные таблицы:")
-    for table in tables:
-        print(f"  ✓ {table[0]}")
-    
-    connection.close()
-    print("\n✅ База данных успешно инициализирована!")
-
-if __name__ == "__main__":
-    init_database()
