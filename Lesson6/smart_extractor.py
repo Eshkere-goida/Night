@@ -162,4 +162,194 @@ if __name__ == "__main__":
         print(f"\n[-] СБОЙ ОПЕРАЦИИ: {err}")
 
 
+import os
+from PIL import Image
+
+
+def build_secret_packet(secret_text) -> str:
+    if isinstance(secret_text, str):
+        secret_bytes = secret_text.encode("utf-8")
+    else:
+        secret_bytes = secret_text
+        
+    length_val = len(secret_bytes)
+    header = bin(length_val)[2:].zfill(16)
+    payload_bits = ""
     
+    for b in secret_bytes:
+        b = bin(b)[2:].zfill(8)
+        payload_bits += b
+        
+    eof_marker = "00000000"
+    full_packet = header + payload_bits + eof_marker
+    return full_packet
+
+
+def is_texture_pixel(pixels, x: int, y: int, width: int, threshold: int = 12) -> bool:
+    if x + 1 >= width:
+        return False
+    r1, g1, b1 = pixels[x, y]
+    r2, g2, b2 = pixels[x+1, y]
+    gradient = abs(r1 - r2) + abs(g1 - g2)
+    return gradient >= threshold
+
+
+def xor_payload(data: bytes, key: bytes) -> bytes:
+    """Миссия 1: Многобайтовый XOR (гаммирование)"""
+    if not key:
+        return data
+    n = len(key)
+    return bytes(b ^ key[i % n] for i, b in enumerate(data))
+
+
+# ==========================================
+# МИССИЯ 3: Подсчет максимальной емкости
+# ==========================================
+def get_max_capacity(pixels, width: int, height: int, threshold: int = 12) -> int:
+    """Считает, сколько байт можно спрятать в картинке на основе текстурных пикселей."""
+    texture_pixel_count = 0
+    for y in range(height):
+        for x in range(width):
+            if is_texture_pixel(pixels, x, y, width, threshold):
+                texture_pixel_count += 1
+    # На каждый байт нужно 8 бит (пикселей)
+    return texture_pixel_count // 8
+
+
+# ==========================================
+# МИССИЯ 2: Brute-Force взломщик
+# ==========================================
+def bruteforce_xor(encrypted_bytes: bytearray) -> None:
+    """Перебирает ключи от 1 до 255 и выводит подходящие варианты."""
+    print("\n[*] Запуск Brute-Force (однобайтовый XOR)...")
+    for candidate_key in range(1, 256):
+        try:
+            # Расшифровываем байты текущим ключом
+            decrypted_bytes = bytes(b ^ candidate_key for b in encrypted_bytes)
+            decoded_text = decrypted_bytes.decode('utf-8')
+            
+            # Если текст состоит из нормальных печатных символов
+            if decoded_text.isprintable():
+                print(f"[Ключ {candidate_key:03d}]: {decoded_text}")
+        except UnicodeDecodeError:
+            # Если при декодировании возникла ошибка, просто идем к следующему ключу
+            continue
+
+
+def unpack_secret_packet(packet_bits: str, key_bytes: bytes = b'') -> str:
+    header_bits = packet_bits[: 16]
+    payload_bits = packet_bits[16 : -8]
+    eof_bits = packet_bits[-8 :]
+
+    if len(packet_bits) < 24:
+        raise ValueError("Пакет слишком короткий (меньше 24 бит)!")
+        
+    if eof_bits != "00000000":
+        raise ValueError("Ошибка целостности пакета: маркер EOF (00000000) не найден!")
+
+    payload_bytes_len = int(header_bits, 2)
+    if payload_bytes_len == 0:
+        raise ValueError("Контейнер пуст: заголовок длины равен 0 байт!")
+
+    expected_bits = 16 + (payload_bytes_len * 8) + 8
+    if len(packet_bits) != expected_bits:
+        raise ValueError("Обрыв потока данных: собрано меньше бит, чем указано в заголовке!")
+
+    secret_bytes = bytearray()
+
+    for i in range(0, len(payload_bits), 8):
+        byte_str = payload_bits[i: i+8]
+        byte = int(byte_str, 2)
+        secret_bytes.append(byte)
+
+    # Миссия 1: применяем ключ, если он передан
+    if key_bytes:
+        secret_bytes = xor_payload(secret_bytes, key_bytes)
+
+    try:
+        return secret_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        # Возвращаем байты для брутфорса, если расшифровать не удалось
+        raise ValueError(f"Сбой UTF-8! Неверный ключ или данные повреждены. Сырые байты: {secret_bytes}")
+
+
+def smart_extract(stego_path: str, password: str = "", threshold: int = 12) -> str:
+    if not os.path.exists(stego_path):
+        raise FileNotFoundError(f"Файл {stego_path} не найден.")
+
+    with Image.open(stego_path) as img:
+        img = img.convert("RGB")
+        width, height = img.size
+        pixels = img.load()
+
+    # Подготавливаем ключ для Миссии 1
+    key_bytes = password.encode("utf-8") if password else b''
+    
+    # Миссия 3: Заранее считаем емкость холста
+    max_capacity_bytes = get_max_capacity(pixels, width, height, threshold)
+
+    extracted_bits = []
+    total_bits_needed = None
+    stop_extraction = False # ИСПРАВЛЕНО: инициализация переменной
+
+    for y in range(height):
+        for x in range(width):
+            if stop_extraction:
+                break
+                
+            if not is_texture_pixel(pixels, x, y, width, threshold):
+                continue
+
+            _, _, b = pixels[x, y]
+            bit = str(b & 1)
+            extracted_bits.append(bit)
+
+            # МИССИЯ 3: Fail-Fast на 16-м бите
+            if len(extracted_bits) == 16 and total_bits_needed is None:
+                header_str = "".join(extracted_bits)
+                payload_len = int(header_str, 2)
+                
+                if payload_len == 0:
+                    raise ValueError("Контейнер пуст: заголовок длины равен 0 байт!")
+                
+                # Мгновенная проверка на "мусорные гиганты"
+                if payload_len > max_capacity_bytes:
+                    raise ValueError(
+                        f"Аномальный заголовок ({payload_len} байт) превышает емкость холста "
+                        f"({max_capacity_bytes} байт)! Тайника нет."
+                    )
+                    
+                total_bits_needed = 16 + (payload_len * 8) + 8
+
+            if total_bits_needed is not None and len(extracted_bits) >= total_bits_needed:
+                stop_extraction = True
+                
+        if stop_extraction:
+            break
+
+    if total_bits_needed is None or len(extracted_bits) < total_bits_needed:
+        raise ValueError("Недостаточно текстурных пикселей или в картинке нет тайника!")
+
+    full_packet = "".join(extracted_bits)
+    
+    # Передаем пароль (key_bytes) в распаковщик
+    return unpack_secret_packet(full_packet, key_bytes)
+
+
+if __name__ == "__main__":
+    file_path = input("Введите путь файла (Enter для stego_output.png): ").strip()
+    if not file_path:
+        file_path = "stego_output.png"
+        
+    password = input("Введите текстовый пароль (Enter, если ключа нет): ").strip()
+
+    try:
+        secret_message = smart_extract(file_path, password, threshold=12)
+        print(f"\n[+] ДЕШИФРОВКА УСПЕШНА! Скрытый текст:\n>>> {secret_message}")
+    
+    except (FileNotFoundError, ValueError) as err:
+        print(f"\n[-] СБОЙ ОПЕРАЦИИ: {err}")
+        
+        # Миссия 2: Если текст не расшифровался, возможно, там однобайтовый XOR.
+        # В реальном приложении здесь нужно было бы передать извлеченные байты в функцию bruteforce_xor.
+        print("\n[!] Подсказка: Если тайник использует старый однобайтовый XOR, примените функцию bruteforce_xor() к извлеченным байтам.")    
